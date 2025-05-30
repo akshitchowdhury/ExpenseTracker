@@ -4,6 +4,7 @@ import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
+import { Loader2 } from "lucide-react"
 
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -30,15 +31,29 @@ import {
 } from "@/components/ui/select"
 import { useExpenses } from "@/hooks/use-expenses"
 import { useToast } from "@/components/ui/use-toast"
+import type { Expense } from "@/hooks/use-expenses"
+
+const expenseCategories = [
+  "Entertainment",
+  "Shopping",
+  "Health",
+  "Education",
+  "Gift",
+  "Other",
+] as const
 
 const formSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
-  category: z.string().min(1, "Category is required"),
+  category: z.enum(expenseCategories, {
+    required_error: "Please select a category",
+  }),
   date: z.date({
     required_error: "Date is required",
   }),
   description: z.string().optional(),
 })
+
+type FormData = z.infer<typeof formSchema>
 
 export function ExpenseForm() {
   const { addExpense } = useExpenses()
@@ -96,7 +111,7 @@ export function ExpenseForm() {
     },
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: "",
@@ -105,25 +120,26 @@ export function ExpenseForm() {
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormData) {
     try {
       setLoading(true)
-      await addExpense({
+      const expenseData: Omit<Expense, '_id' | 'userId'> = {
         amount: parseFloat(values.amount),
         category: values.category,
         date: values.date,
         description: values.description,
-      })
+      }
+      await addExpense(expenseData)
       toast({
         title: "Success",
         description: "Expense added successfully",
       })
       form.reset()
     } catch (error) {
-      console.log(error)
+      const errorMessage = error instanceof Error ? error.message : "Failed to add expense. Please try again."
       toast({
         title: "Error",
-        description: "Failed to add expense. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -160,12 +176,11 @@ export function ExpenseForm() {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Entertainment">Entertainment</SelectItem>
-                  <SelectItem value="Shopping">Shopping</SelectItem>
-                  <SelectItem value="Health">Health</SelectItem>
-                  <SelectItem value="Education">Education</SelectItem>
-                  <SelectItem value="Gift">Gift</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  {expenseCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -215,7 +230,14 @@ export function ExpenseForm() {
           )}
         />
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Adding..." : "Add Expense"}
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Adding...
+            </>
+          ) : (
+            "Add Expense"
+          )}
         </Button>
       </form>
     </Form>
