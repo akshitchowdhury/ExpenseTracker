@@ -79,6 +79,7 @@ export default function SettingsPage() {
           },
         })
       } catch (error) {
+        console.log(error)
         toast({
           title: "Error",
           description: "Failed to load profile. Please refresh the page.",
@@ -126,6 +127,7 @@ export default function SettingsPage() {
         description: "Your profile has been updated successfully.",
       })
     } catch (error) {
+      console.log(error)
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
