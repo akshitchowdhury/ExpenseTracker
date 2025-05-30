@@ -3,7 +3,6 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 import { ResponsiveContainer } from "recharts"
-import type { Payload as RechartsPayload } from "recharts/types/component/DefaultLegendContent"
 import { cn } from "@/lib/utils"
 
 const THEMES = { light: "", dark: ".dark" } as const
