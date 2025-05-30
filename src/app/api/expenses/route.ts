@@ -17,7 +17,8 @@ export async function GET(request: Request) {
 
     await connectDB();
 
-    const query: any = { userId };
+    const query: Record<string, unknown> = { userId };
+
     if (startDate && endDate) {
       query.date = {
         $gte: new Date(startDate),

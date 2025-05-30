@@ -1,6 +1,6 @@
 import { useExpenses } from "@/hooks/use-expenses"
 import { PieChart as PieChartIcon } from "lucide-react"
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip, TooltipProps } from "recharts"
 
 export function IncomeDistributionChart() {
   const { expenses, profile } = useExpenses()
@@ -42,7 +42,7 @@ export function IncomeDistributionChart() {
       color: `hsl(217, 91%, ${65 + (index * 5)}%)`,
     }))
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (

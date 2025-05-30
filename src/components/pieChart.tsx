@@ -1,6 +1,6 @@
 "use client"
 
-import { LabelList, Pie, PieChart, Tooltip } from "recharts"
+import { LabelList, Pie, PieChart, Tooltip, TooltipProps } from "recharts"
 import {
   Card,
   CardContent,
@@ -46,7 +46,20 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+interface ExpenseData {
+  category: string;
+  amount: number;
+  fill: string;
+}
+
+const CustomTooltip = ({ 
+  active, 
+  payload 
+}: TooltipProps<number, string> & { 
+  payload?: Array<{ 
+    payload: ExpenseData 
+  }> 
+}) => {
   if (!active || !payload?.length) return null
   const data = payload[0].payload
   return (

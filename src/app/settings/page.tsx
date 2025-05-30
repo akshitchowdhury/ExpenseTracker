@@ -90,6 +90,7 @@ export default function SettingsPage() {
         throw new Error("Failed to update profile")
       }
     } catch (error) {
+      console.log(error)
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",

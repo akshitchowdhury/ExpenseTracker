@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 import { ResponsiveContainer } from "recharts"
+import type { Payload as RechartsPayload } from "recharts/types/component/DefaultLegendContent"
 import { cn } from "@/lib/utils"
 
 const THEMES = { light: "", dark: ".dark" } as const
@@ -83,16 +84,20 @@ function ChartContainer({
   )
 }
 
+interface TooltipItemPayload {
+  name: string
+  value: number
+  payload: {
+    [key: string]: string | number
+  }
+}
+
 interface ChartTooltipContentProps {
   nameKey?: string
   hideLabel?: boolean
   indicator?: "line" | "bar"
   active?: boolean
-  payload?: Array<{
-    name: string
-    value: number
-    payload: Record<string, any>
-  }>
+  payload?: TooltipItemPayload[]
 }
 
 function ChartTooltipContent({
@@ -100,7 +105,6 @@ function ChartTooltipContent({
   payload,
   nameKey,
   hideLabel,
-  indicator = "bar",
 }: ChartTooltipContentProps) {
   if (!active || !payload?.length) return null
 
@@ -128,19 +132,45 @@ function ChartTooltipContent({
   )
 }
 
-function ChartTooltip({
-  children,
-  ...props
-}: {
-  children: React.ReactNode
-}) {
+interface ChartPayloadBase {
+  value: string | number
+  dataKey?: string | number
+  color?: string
+  payload?: {
+    [key: string]: string | number
+    name?: string
+    value?: string | number
+  }
+}
+
+function getPayloadConfigFromPayload(
+  config: ChartConfig,
+  payload: ChartPayloadBase,
+  key: string
+) {
+  const rawPayload = payload?.payload || {}
+  const possibleKey = String(
+    rawPayload[key] !== undefined
+      ? rawPayload[key]
+      : payload[key] !== undefined
+        ? payload[key]
+        : key
+  )
+  return config[possibleKey] || config[key]
+}
+
+function ChartTooltip(props: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) {
+  const { children, ...rest } = props
+
+  if (!children) return null
+
   return (
     <div
       className={cn(
         "rounded-lg border bg-background p-2 shadow-sm",
         "data-[visible=false]:hidden"
       )}
-      {...props}
+      {...rest}
     >
       {children}
     </div>
@@ -148,9 +178,12 @@ function ChartTooltip({
 }
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
-  const colorConfig = Object.entries(config).filter(
-    ([, cfg]) => cfg.theme || cfg.color
+  const colorConfig = (
+    Object.entries(config).filter(
+      ([, cfg]) => cfg.theme || cfg.color
+    ) as [string, ChartConfig[string]][]
   )
+
   if (!colorConfig.length) return null
 
   return (
@@ -225,17 +258,6 @@ function ChartLegendContent({
       })}
     </div>
   )
-}
-
-// Helper to extract config for legend tooltip
-function getPayloadConfigFromPayload(
-  config: ChartConfig,
-  payload: any,
-  key: string
-) {
-  const rawPayload = payload?.payload || {}
-  const possibleKey = rawPayload[key] || payload[key] || key
-  return config[possibleKey] || config[key]
 }
 
 export {
