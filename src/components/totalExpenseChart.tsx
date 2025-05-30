@@ -5,7 +5,26 @@ import { useExpenses } from "@/hooks/use-expenses"
 import { formatCurrency } from "@/lib/utils"
 import { startOfMonth, endOfMonth, eachMonthOfInterval, format, subMonths } from "date-fns"
 
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
+// Define the shape of your chart data.
+interface ChartData {
+  month: string
+  total: number
+}
+
+// Define the type for a tooltip item. Typically Recharts passes an array of items,
+// each with a `payload` property that contains your ChartData.
+interface CustomTooltipItem {
+  payload: ChartData
+  // Additional properties like `name` or `value` can be added as needed.
+}
+
+// Define props for the CustomTooltip component.
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: CustomTooltipItem[]
+}
+
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (!active || !payload?.length) return null
   const data = payload[0].payload
   return (
@@ -27,15 +46,13 @@ export function TotalExpenseChart() {
     end: new Date(),
   })
 
-  const chartData = months.map((month) => {
+  const chartData: ChartData[] = months.map((month) => {
     const start = startOfMonth(month)
     const end = endOfMonth(month)
-    const monthlyExpenses = expenses.filter(
-      (expense) => {
-        const date = new Date(expense.date)
-        return date >= start && date <= end
-      }
-    )
+    const monthlyExpenses = expenses.filter((expense) => {
+      const date = new Date(expense.date)
+      return date >= start && date <= end
+    })
     const total = monthlyExpenses.reduce((sum, expense) => sum + expense.amount, 0)
 
     return {
