@@ -10,25 +10,41 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
+import { Loader2 } from "lucide-react"
 
 const formSchema = z.object({
   username: z.string().min(2, "Username must be at least 2 characters"),
-  monthlyIncome: z.string().transform((val) => Number(val)),
-  mandatorySavings: z.string().transform((val) => Number(val)),
+  monthlyIncome: z.string().min(1, "Monthly income is required"),
+  mandatorySavings: z.string().min(1, "Mandatory savings is required"),
   fixedExpenses: z.object({
-    rent: z.string().transform((val) => Number(val)),
-    electricityBill: z.string().transform((val) => Number(val)),
-    furnitureRent: z.string().transform((val) => Number(val)),
-    houseDeposit: z.string().transform((val) => Number(val)),
+    rent: z.string().min(1, "Rent is required"),
+    electricityBill: z.string().min(1, "Electricity bill is required"),
+    furnitureRent: z.string().min(1, "Furniture rent is required"),
+    houseDeposit: z.string().min(1, "House deposit is required"),
   }),
 })
+
+type FormData = z.infer<typeof formSchema>
+
+interface SettingsFormValues {
+  username: string
+  monthlyIncome: number
+  mandatorySavings: number
+  fixedExpenses: {
+    rent: number
+    electricityBill: number
+    furnitureRent: number
+    houseDeposit: number
+  }
+}
 
 export default function SettingsPage() {
   const { user } = useUser()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
@@ -47,22 +63,27 @@ export default function SettingsPage() {
     async function loadProfile() {
       try {
         const response = await fetch("/api/user-profile")
-        if (response.ok) {
-          const data = await response.json()
-          form.reset({
-            username: data.username,
-            monthlyIncome: String(data.monthlyIncome),
-            mandatorySavings: String(data.mandatorySavings),
-            fixedExpenses: {
-              rent: String(data.fixedExpenses.rent),
-              electricityBill: String(data.fixedExpenses.electricityBill),
-              furnitureRent: String(data.fixedExpenses.furnitureRent),
-              houseDeposit: String(data.fixedExpenses.houseDeposit),
-            },
-          })
+        if (!response.ok) {
+          throw new Error("Failed to load profile")
         }
+        const data: SettingsFormValues = await response.json()
+        form.reset({
+          username: data.username,
+          monthlyIncome: String(data.monthlyIncome),
+          mandatorySavings: String(data.mandatorySavings),
+          fixedExpenses: {
+            rent: String(data.fixedExpenses.rent),
+            electricityBill: String(data.fixedExpenses.electricityBill),
+            furnitureRent: String(data.fixedExpenses.furnitureRent),
+            houseDeposit: String(data.fixedExpenses.houseDeposit),
+          },
+        })
       } catch (error) {
-        console.error("Error loading profile:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load profile. Please refresh the page.",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
@@ -70,37 +91,57 @@ export default function SettingsPage() {
 
     if (user) {
       loadProfile()
+    } else {
+      setLoading(false)
     }
-  }, [user, form])
+  }, [user, form, toast])
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormData) {
     try {
+      setIsSaving(true)
+      const transformedValues: SettingsFormValues = {
+        username: values.username,
+        monthlyIncome: Number(values.monthlyIncome),
+        mandatorySavings: Number(values.mandatorySavings),
+        fixedExpenses: {
+          rent: Number(values.fixedExpenses.rent),
+          electricityBill: Number(values.fixedExpenses.electricityBill),
+          furnitureRent: Number(values.fixedExpenses.furnitureRent),
+          houseDeposit: Number(values.fixedExpenses.houseDeposit),
+        },
+      }
+
       const response = await fetch("/api/user-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(transformedValues),
       })
 
-      if (response.ok) {
-        toast({
-          title: "Settings updated",
-          description: "Your profile has been updated successfully.",
-        })
-      } else {
+      if (!response.ok) {
         throw new Error("Failed to update profile")
       }
+
+      toast({
+        title: "Settings updated",
+        description: "Your profile has been updated successfully.",
+      })
     } catch (error) {
-      console.log(error)
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSaving(false)
     }
   }
 
   if (loading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -218,7 +259,16 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button type="submit">Save Changes</Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
             </form>
           </Form>
         </CardContent>
