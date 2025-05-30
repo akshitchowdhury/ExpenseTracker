@@ -4,8 +4,12 @@ import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { useTheme } from "next-themes"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -25,12 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
 import { useExpenses } from "@/hooks/use-expenses"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -47,6 +45,57 @@ export function ExpenseForm() {
   const { addExpense } = useExpenses()
   const { toast } = useToast()
   const [loading, setLoading] = React.useState(false)
+  const { theme: applicationTheme } = useTheme()
+
+  const theme = createTheme({
+    palette: {
+      mode: applicationTheme === 'dark' ? 'dark' : 'light',
+      text: {
+        primary: applicationTheme === 'dark' ? '#fff' : '#000',
+        secondary: applicationTheme === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+      },
+      background: {
+        paper: applicationTheme === 'dark' ? '#1c1c1c' : '#fff',
+        default: applicationTheme === 'dark' ? '#121212' : '#fff',
+      },
+    },
+    components: {
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            '& .MuiInputBase-root': {
+              color: applicationTheme === 'dark' ? '#fff' : '#000',
+              backgroundColor: applicationTheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#fff',
+            },
+            '& .MuiInputLabel-root': {
+              color: applicationTheme === 'dark' ? '#fff' : '#000',
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: applicationTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: applicationTheme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+            },
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundColor: applicationTheme === 'dark' ? '#1c1c1c' : '#fff',
+            color: applicationTheme === 'dark' ? '#fff' : '#000',
+            '& .MuiPickersDay-root': {
+              color: applicationTheme === 'dark' ? '#fff' : '#000',
+              '&.Mui-selected': {
+                backgroundColor: applicationTheme === 'dark' ? '#fff' : '#1976d2',
+                color: applicationTheme === 'dark' ? '#000' : '#fff',
+              },
+            },
+          },
+        },
+      },
+    },
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -129,37 +178,25 @@ export function ExpenseForm() {
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Date</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("1900-01-01")
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <FormControl>
+                <ThemeProvider theme={theme}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      value={field.value}
+                      onChange={(newValue) => field.onChange(newValue)}
+                      disableFuture
+                      minDate={new Date("1900-01-01")}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          size: "small",
+                          error: !!form.formState.errors.date,
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
+                </ThemeProvider>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
